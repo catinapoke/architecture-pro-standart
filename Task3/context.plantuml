@@ -1,0 +1,34 @@
+@startuml context.plantuml
+title Диаграмма контекста банка "Стандарт"
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Context.puml
+'!include ./C4_PlantUML/C4_Component.puml
+
+Person(CCWorker, "Оператор колл-центра", "Работает в колл-центре банка")
+Person(Customer, "Клиент", "Клиент банка")
+Person(DManager, "Менеджер отдела депозитов", "Работает в отделе депозитов банка")
+
+System(CallCenterSystem, "Система колл-центра", "Система колл-центра банка")
+System(ABS, "АБС", "Автоматизированная банковская система банка")
+System(InternetBank, "Интернет-банк", "Интернет-банк банка")
+System(DepositService, "Сервис депозитов", "Сервис обработки ставок и заявок по депозитам")
+System(Site, "Сайт", "Главная страница банка")
+System(SMSGateway, "Шлюз СМС", "Шлюз для отправки и получения СМС")
+System_Ext(TelecomOperator, "Телеком-оператор", "Телеком-оператор банка")
+
+Rel(Customer, Site, "Просмотр предложения, отправка заявки")
+Rel(Customer, InternetBank, "Регистрация, авторизация, управления счетами, просмотр личных предложений, отправка заявки")
+Rel(CCWorker, CallCenterSystem, "Просмотр заявок, отправка ответа")
+Rel(DManager, ABS, "Просмотр заявок, отправка ответа")
+Rel(SMSGateway, TelecomOperator, "Отправка СМС")
+
+Rel(InternetBank, DepositService, "Получение и отправка данных о ставках и заявках")
+Rel(Site, CallCenterSystem, "Отправка заявки на депозит")
+Rel(Site, DepositService, "Получение актуальных ставок по депозитам")
+Rel(ABS, DepositService, "Запросы по функционалу депозитов, синхронизация изменений по депозитам и запись ставок")
+Rel(CallCenterSystem, DepositService, "Получение и отправка данных о заявках и пользователях")
+Rel(DepositService, SMSGateway, "Публикация данных о ставках, заявках и уведомлениях")
+
+@enduml 
