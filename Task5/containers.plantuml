@@ -30,7 +30,7 @@ Rel(ABSApp, ABSDatabase, "Логика работы АБС на процедур
 Rel(KafkaCDC, Kafka, "Передача изменений данных")
 Rel(KafkaCDC, ABSDatabase, "Чтение изменений истории платежей и данных о клиентах по кредитам для передачи в Kafka")
 
-Rel(FManager, ABSApp, "Просмотр и работа с кредитными заявками")
+Rel(FManager, ABSApp, "Просмотр, создание и работа с кредитными заявками")
 
 System_Boundary(Site, "Сайт") {
   Container(SiteFrontend, "UI сайта", "React.js", "Пользовательский интерфейс сайта")
