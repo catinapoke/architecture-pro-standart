@@ -1,0 +1,87 @@
+@startuml containers.plantuml
+title Диаграмма контейнеров банка "Стандарт"
+
+top to bottom direction
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(Customer, "Клиент", "Клиент банка")
+Person(FManager, "Менеджер фронт-офиса", "Работает в фронт-офисе банка")
+Person(CManager, "Менеджер кредитного отделения", "Работает в кредитном отделении банка")
+
+System(SMSGateway, "Шлюз СМС", "Шлюз для отправки и получения СМС")
+System(Kafka, "Кafka", "Брокер сообщений")
+System(ReverseProxy, "Reverse Proxy (Nginx)", "Маршрутизирует запросы к сайту и интернет-банку с использованием TLS")
+
+System_Ext(TelecomOperator, "Телеком-оператор", "Телеком-оператор банка")
+System_Ext(CreditHistory, "Бюро кредитных историй", "Бюро кредитных историй банка")
+
+System_Boundary(InternetBankSystem, "Интернет-банк") {
+  Container(InternetBankBackend, "UI", "ASP.NET MVC 4.5", "Receives user interactions")
+  Container(InternetBankDatabase, "Database", "MS SQL Server", "Stores user data, roles and bindings")
+}
+Rel(InternetBankBackend, InternetBankDatabase, "Хранение данных о заявках и пользователях")
+
+System_Boundary(ABSSystem, "АБС") {
+  Container(ABSApp, "Клиентский интерфейс АБС", "Delphi", "Пользовательский интерфейс АБС")
+  ContainerDb(ABSDatabase, "База данных АБС", "Oracle", "Логика работы АБС на процедурах PL-SQL")
+  Container(KafkaCDC, "CDC Коннектор Kafka", "Debezium Connector for Oracle", "CDC коннектор Kafka для Oracle")
+}
+Rel(ABSApp, ABSDatabase, "Логика работы АБС на процедурах PL-SQL")
+Rel(KafkaCDC, Kafka, "Передача изменений данных")
+Rel(KafkaCDC, ABSDatabase, "Чтение изменений истории платежей и данных о клиентах по кредитам для передачи в Kafka")
+
+Rel(FManager, ABSApp, "Просмотр и работа с кредитными заявками")
+
+System_Boundary(Site, "Сайт") {
+  Container(SiteFrontend, "UI сайта", "React.js", "Пользовательский интерфейс сайта")
+  Container(SiteBackend, "Бекенд сайта", "PHP", "Функционал сайта")
+  ContainerDb(SiteDatabase, "База данных сайта", "MS SQL Server", "Хранение данных о заявках и пользователях")
+}
+Rel(SiteFrontend, SiteBackend, "Пользовательский интерфейс сайта")
+Rel(SiteBackend, SiteDatabase, "Хранение данных о заявках и пользователях")
+
+Rel(Customer, ReverseProxy, "Доступ к сайту и интернет-банку по HTTPS/TLS")
+Rel(ReverseProxy, SiteFrontend, "Маршрутизация запросов к сайту")
+Rel(ReverseProxy, InternetBankBackend, "Маршрутизация запросов к интернет-банку")
+Rel(SMSGateway, TelecomOperator, "Отправка СМС")
+
+Rel(Kafka, SMSGateway, "Передача данных об отправке СМС")
+Rel(SMSGateway, Kafka, "Передача данных об отправленных СМС")
+
+System_Boundary(CreditScoreSystem, "Система кредитного скоринга") {
+  Container(CreditScoreBackend, "API системы кредитного скоринга", "Python Flask", "Функционал системы кредитного скоринга")
+  Container(CreditScoreDatabase, "База данных системы кредитного скоринга", "PostgreSQL", "Хранение данных о заявках и пользователях")
+}
+Rel(CreditScoreBackend, CreditScoreDatabase, "Хранение данных о заявках и пользователях")
+Rel(CreditScoreBackend, CreditHistory, "Получение данных о клиентах из Бюро кредитных историй")
+Rel(CreditScoreBackend, Kafka, "Получение данных о клиентах и их истории платежей по кредитам")
+Rel(CreditScoreBackend, Kafka, "Передача расчетов скоринга клиентов при изменении данных в Кредитный конвейер")
+
+System_Boundary(CreditConveyor, "Система кредитного конвейера") {
+  Container(CreditConveyorBackend, "Бекенд системы кредитного конвейера", "BPM Camunda(Java)", "Функционал системы кредитного конвейера")
+  Container(CreditConveyorDatabase, "База данных системы кредитного конвейера", "Oracle", "Хранение данных о заявках и пользователях")
+}
+Rel(CreditConveyorBackend, CreditConveyorDatabase, "Хранение данных о заявках и пользователях")
+
+Rel(CManager, CreditConveyorBackend, "Просмотр и работа с кредитными заявками")
+
+Rel(CreditConveyorBackend, Kafka, "Чтение данных о заявках на кредит")
+Rel(CreditConveyorBackend, CreditScoreBackend, "Запрос оценки кредитной заявки")
+Rel(CreditConveyorBackend, Kafka, "Передача данных о смене статуса кредитной заявки")
+
+System_Boundary(OnlineCreditSystem, "Система онлайн кредитования") {
+  Container(OnlineCreditBackend, "Бекенд системы онлайн кредитования", "Python Flask", "Функционал системы онлайн кредитования")
+  Container(OnlineCreditDatabase, "База данных системы онлайн кредитования", "PostgreSQL", "Хранение данных о заявках и пользователях")
+}
+Rel(OnlineCreditBackend, OnlineCreditDatabase, "Хранение данных о заявках и пользователях")
+
+Rel(ABSApp, OnlineCreditBackend, "Работа с кредитными заявками")
+Rel(SiteBackend, OnlineCreditBackend, "Запрос кредитных предложений, подача кредитной заявки")
+Rel(InternetBankBackend, OnlineCreditBackend, "Запрос кредитных предложений(в т.ч предрасчитанных) и подача кредитной заявки")
+
+Rel(OnlineCreditBackend, Kafka, "Отправка уведомлений о смене статуса кредитной заявки")
+Rel(OnlineCreditBackend, Kafka, "Передача данных о смене данных кредитной заявки в Кредитный конвейер, чтение данных от Кредитного конвейера и предрасчитанных кредитных предложений")
+
+Rel(OnlineCreditBackend, CreditConveyorBackend, "Запрос расчета заявки на кредит по паспорту и предрасчитанных кредитных предложений")
+
+@enduml
