@@ -1,0 +1,39 @@
+@startuml context.plantuml
+title Диаграмма контекста банка "Стандарт"
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Context.puml
+
+Person(Customer, "Клиент", "Клиент банка")
+Person(FManager, "Менеджер фронт-офиса", "Работает во фронт-офисе банка")
+Person(CManager, "Менеджер кредитного отделения", "Работает в кредитном отделении банка")
+
+System(Site, "Сайт", "Главная страница банка")
+System(InternetBank, "Интернет-банк", "Личный кабинет клиента банка")
+System(ABS, "АБС", "Автоматизированная банковская система для работы с кредитными заявками")
+System(OnlineCreditSystem, "Система онлайн кредитования", "Обрабатывает кредитные предложения и заявки")
+System(CreditConveyor, "Система кредитного конвейера", "Оркестрирует обработку кредитных заявок")
+System(CreditScoreSystem, "Система кредитного скоринга", "Рассчитывает кредитный скоринг")
+System(SMSGateway, "Шлюз СМС", "Шлюз для отправки и получения СМС")
+System_Ext(CreditHistory, "Бюро кредитных историй", "Внешнее бюро кредитных историй")
+System_Ext(TelecomOperator, "Телеком-оператор", "Внешний оператор доставки СМС")
+
+Rel(Customer, Site, "Просмотр кредитных предложений, подача кредитной заявки")
+Rel(Customer, InternetBank, "Просмотр кредитных предложений и подача кредитной заявки")
+Rel(FManager, ABS, "Просмотр и работа с кредитными заявками")
+Rel(CManager, CreditConveyor, "Просмотр и работа с кредитными заявками")
+
+Rel(Site, OnlineCreditSystem, "Запрос кредитных предложений, подача кредитной заявки")
+Rel(InternetBank, OnlineCreditSystem, "Запрос кредитных предложений и подача кредитной заявки")
+Rel(ABS, OnlineCreditSystem, "Работа с кредитными заявками")
+
+Rel(OnlineCreditSystem, CreditConveyor, "Передача кредитной заявки на обработку")
+Rel(CreditConveyor, OnlineCreditSystem, "Передача статусов заявки и предрасчитанных предложений")
+Rel(CreditConveyor, CreditScoreSystem, "Запрос оценки кредитной заявки")
+Rel(ABS, CreditScoreSystem, "Передача данных о клиентах и истории платежей по кредитам")
+Rel(CreditScoreSystem, CreditHistory, "Получение данных о клиентах")
+Rel(OnlineCreditSystem, SMSGateway, "Отправка уведомлений о смене статуса кредитной заявки")
+Rel(SMSGateway, TelecomOperator, "Отправка СМС")
+
+@enduml

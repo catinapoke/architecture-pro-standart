@@ -1,0 +1,82 @@
+@startuml containers.plantuml
+title Диаграмма контейнеров банка "Стандарт"
+
+top to bottom direction
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(CCWorker, "Оператор колл-центра", "Работает в колл-центре банка")
+Person(Customer, "Клиент", "Клиент банка")
+Person(DManager, "Менеджер отдела депозитов", "Работает в отделе депозитов банка")
+
+System(SMSGateway, "Шлюз СМС", "Шлюз для отправки и получения СМС")
+System(Kafka, "Кafka", "Брокер сообщений")
+System(EmailService, "Email сервис", "Microsoft Exchange", "Сервис для отправки и получения email")
+System(ReverseProxy, "Reverse Proxy (Nginx)", "Маршрутизирует запросы к сайту и интернет-банку с использованием TLS")
+
+System_Ext(TelecomOperator, "Телеком-оператор", "Телеком-оператор банка")
+System_Ext(PartnerCallCenter, "Партнерский кол-центр", "Партнерский кол-центр банка")
+
+System_Boundary(InternetBankSystem, "Интернет-банк") {
+  Container(InternetBankBackend, "UI", "ASP.NET MVC 4.5", "Receives user interactions")
+  Container(InternetBankDatabase, "Database", "MS SQL Server", "Stores user data, roles and bindings")
+}
+Rel(InternetBankBackend, InternetBankDatabase, "Хранение данных о заявках и пользователях")
+
+System_Boundary(DepositServiceSystem, "Сервис депозитов") {
+  Container(DepositServiceBackend, "API сервиса депозитов", "Java Spring Boot", "Функционал сервиса депозитов")
+  Container(DepositServiceDatabase, "База данных сервиса депозитов", "MS SQL Server", "Хранение данных о заявках и пользователях")
+}
+Rel(DepositServiceBackend, DepositServiceDatabase, "Хранение данных о заявках и пользователях")
+
+Rel(DepositServiceBackend, Kafka, "Отправка изменений по депозитам в монолит АБС")
+Rel(DepositServiceBackend, EmailService, "Отправка ставок по депозитам")
+Rel(EmailService, PartnerCallCenter, "Доставка писем с актуальными ставками по депозитам")
+
+System_Boundary(ABSSystem, "АБС") {
+  Container(ABSApp, "Клиентский интерфейс АБС", "Delphi", "Пользовательский интерфейс АБС")
+  ContainerDb(ABSDatabase, "База данных АБС", "Oracle", "Логика работы АБС на процедурах PL-SQL")
+  Container(KafkaConnector, "Коннектор Kafka", "Sink Connector", "Коннектор Kafka для MS SQL Server")
+}
+Rel(ABSApp, ABSDatabase, "Логика работы АБС на процедурах PL-SQL")
+Rel(ABSApp, DepositServiceBackend, "Запросы по функционалу депозитов, запись ставок по депозитам")
+Rel(KafkaConnector, Kafka, "Чтение изменений по депозитам в монолит АБС")
+Rel(ABSDatabase, KafkaConnector, "Получение данных из Kafka")
+Rel(ABSDatabase, DepositServiceBackend, "Чтение данных по депозитам, чтение ставок по депозитам")
+
+System_Boundary(CallCenterSystem, "Система колл-центра") {
+  Container(CallCenterFrontend, "UI колл-центра", "React.js", "Пользовательский интерфейс колл-центра")
+  Container(CallCenterBackend, "API колл-центра", "Java Spring Boot", "Функционал колл-центра")
+  Container(CallCenterDatabase, "База данных колл-центра", "PostgreSQL", "Хранение данных о заявках и пользователях")
+}
+Rel(CallCenterFrontend, CallCenterBackend, "Пользовательский интерфейс колл-центра")
+Rel(CallCenterBackend, CallCenterDatabase, "Хранение данных о заявках и пользователях")
+
+System_Boundary(Site, "Сайт") {
+  Container(SiteFrontend, "UI сайта", "React.js", "Пользовательский интерфейс сайта")
+  Container(SiteBackend, "Бекенд сайта", "PHP", "Функционал сайта")
+  ContainerDb(SiteDatabase, "База данных сайта", "MS SQL Server", "Хранение данных о заявках и пользователях")
+}
+Rel(SiteFrontend, SiteBackend, "Пользовательский интерфейс сайта")
+Rel(SiteBackend, SiteDatabase, "Хранение данных о заявках и пользователях")
+Rel(SiteBackend, DepositServiceBackend, "Запрос ставок по депозитам")
+
+Rel(Customer, ReverseProxy, "Доступ к сайту и интернет-банку по HTTPS/TLS")
+Rel(ReverseProxy, SiteFrontend, "Маршрутизация запросов к сайту")
+Rel(ReverseProxy, InternetBankBackend, "Маршрутизация запросов к интернет-банку")
+Rel(CCWorker, CallCenterFrontend, "Просмотр заявок, отправка ответа")
+Rel(DManager, ABSApp, "Просмотр заявок, отправка ответа")
+Rel(SMSGateway, TelecomOperator, "Отправка СМС")
+
+Rel(DepositServiceBackend, Kafka, "Отправка СМС кода о подтверждении заявки в SMSGateway")
+Rel_Back(Kafka, DepositServiceBackend, "Получение СМС кода для подтверждения заявки от SMSGateway")
+
+Rel(Kafka, SMSGateway, "Передача данных об отправке СМС")
+Rel(SMSGateway, Kafka, "Передача данных об отправленных СМС")
+
+
+Rel(InternetBankBackend, DepositServiceBackend, "Получение и отправка данных о заявках и пользователях")
+Rel(SiteBackend, CallCenterBackend, "Отправка заявки на депозит")
+Rel(CallCenterBackend, DepositServiceBackend, "Получение и отправка данных о заявках и пользователях")
+
+
+@enduml
